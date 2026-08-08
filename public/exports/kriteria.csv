@@ -1,0 +1,8 @@
+﻿Kode,"Nama Kriteria",Jenis,Bobot
+C1,Kehadiran,benefit,0.20
+C2,Disiplin,benefit,0.15
+C3,"Tanggung Jawab",benefit,0.15
+C4,"Kerja Sama",benefit,0.15
+C5,Produktivitas,benefit,0.20
+C6,Inisiatif,benefit,0.10
+C7,"Human Error",cost,0.05
