@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Criterion;
 use App\Models\LevelProportion;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -45,22 +46,31 @@ class ProportionController extends Controller
         $positions = $this->managedPositions();
 
         $rules = [];
+        $attributes = [];
         foreach ($positions as $pos) {
             foreach ($criteria as $c) {
-                $rules["prop.{$pos}.{$c->id}"] = 'required|numeric|min:0|max:100';
+                $rules["prop.{$pos}.{$c->id}"] = 'required|integer|min:0|max:100';
+                $attributes["prop.{$pos}.{$c->id}"] = "Bobot {$c->name} ({$pos})";
             }
         }
 
-        $validator = Validator::make($request->all(), $rules);
+        $messages = [
+            'required' => ':attribute wajib diisi.',
+            'integer' => ':attribute harus bilangan bulat (tanpa koma/desimal).',
+            'min' => ':attribute minimal :min.',
+            'max' => ':attribute maksimal :max.',
+        ];
+
+        $validator = Validator::make($request->all(), $rules, $messages, $attributes);
         $validator->after(function ($validator) use ($request, $positions, $criteria): void {
             foreach ($positions as $pos) {
-                $total = 0.0;
+                $total = 0;
                 foreach ($criteria as $c) {
-                    $total += (float) ($request->input("prop.{$pos}.{$c->id}", 0) ?? 0);
+                    $total += (int) $request->input("prop.{$pos}.{$c->id}", 0);
                 }
 
-                if (abs($total - 100) > 0.01) {
-                    $validator->errors()->add("prop.{$pos}", "Total bobot untuk jabatan {$pos} harus 100%, saat ini {$total}%." );
+                if ($total !== 100) {
+                    $validator->errors()->add("prop.{$pos}", "Total bobot untuk jabatan {$pos} harus 100%, saat ini {$total}%.");
                 }
             }
         });
@@ -70,7 +80,7 @@ class ProportionController extends Controller
         // Upsert satu per satu (data kecil, aman)
         foreach ($positions as $pos) {
             foreach ($criteria as $c) {
-                $value = (float) $validated['prop'][$pos][$c->id];
+                $value = (int) $validated['prop'][$pos][$c->id];
                 LevelProportion::updateOrCreate(
                     ['position' => $pos, 'criterion_id' => $c->id],
                     ['proportion' => $value],
@@ -87,6 +97,6 @@ class ProportionController extends Controller
      */
     private function managedPositions(): array
     {
-        return array_values(array_filter(array_keys(\App\Models\User::HIERARCHY), fn ($p) => $p !== 'Owner'));
+        return array_values(array_filter(array_keys(User::HIERARCHY), fn ($p) => $p !== 'Owner'));
     }
 }

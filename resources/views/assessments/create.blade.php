@@ -102,8 +102,6 @@
                                     <span class="badge {{ $criterion->type === 'benefit' ? 'badge-benefit' : 'badge-cost' }} small">
                                         {{ $criterion->type }}
                                     </span>
-                                    <br>
-                                    <small class="text-light">w={{ number_format($criterion->weight, 2) }}%</small>
                                 </th>
                             @endforeach
                         </tr>

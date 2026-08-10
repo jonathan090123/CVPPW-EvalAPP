@@ -64,6 +64,11 @@
             font-size: .8rem;
             white-space: nowrap;
         }
+        .topbar .topbar-user-pill .topbar-username {
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
         /* ===== Sidebar ===== */
         .sidebar {
@@ -214,6 +219,9 @@
             .topbar .topbar-brand {
                 font-size: .95rem;
             }
+            .topbar .topbar-user-pill .topbar-username {
+                max-width: 90px;
+            }
             .main-content {
                 padding: .8rem .8rem 1.3rem;
             }
@@ -241,10 +249,7 @@
     <div class="ms-auto d-flex align-items-center gap-2 flex-wrap justify-content-end">
         <span class="topbar-user-pill">
             <i class="bi bi-person-circle"></i>
-            <span class="d-none d-sm-inline">{{ auth()->user()?->username ?? 'Guest' }}</span>
-            @if (auth()->user()?->position)
-                <span class="text-white-50">·</span> {{ auth()->user()->position }}
-            @endif
+            <span class="topbar-username">{{ auth()->user()?->username ?? 'Guest' }}</span>
         </span>
         <form action="{{ route('logout') }}" method="POST" class="d-inline">
             @csrf
@@ -298,6 +303,13 @@
             </a>
         </li>
         @endif
+        <li class="nav-section mt-3">Akun</li>
+        <li class="nav-item">
+            <a href="{{ route('settings.edit') }}"
+               class="nav-link px-2 py-2 {{ request()->routeIs('settings.*') ? 'active' : '' }}">
+                <i class="bi bi-gear me-2"></i>Pengaturan
+            </a>
+        </li>
     </ul>
 </nav>
 

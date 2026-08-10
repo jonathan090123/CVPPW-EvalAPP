@@ -17,25 +17,6 @@
     </select>
     @error('type')<div class="invalid-feedback">{{ $message }}</div>@enderror
 </div>
-@php
-    $othersTotal = isset($criterion)
-        ? \App\Models\Criterion::where('id', '!=', $criterion->id)->sum('weight')
-        : \App\Models\Criterion::sum('weight');
-    $remaining = max(0, 100 - $othersTotal);
-@endphp
-<div class="mb-3">
-    <label class="form-label fw-semibold">
-        Bobot (%)
-        <small class="text-muted">
-            (0 – 100, total semua bobot harus = 100%).
-            Sisa bobot tersedia: <strong>{{ number_format($remaining, 2) }}%</strong>
-        </small>
-    </label>
-    <input type="number" name="weight" step="0.01" min="0.01" max="{{ $remaining }}"
-           value="{{ old('weight', $criterion->weight ?? '') }}"
-           class="form-control @error('weight') is-invalid @enderror"
-           placeholder="Contoh: 20"
-           oninvalid="this.setCustomValidity('Nilai tidak boleh melebihi sisa bobot tersedia ({{ number_format($remaining, 2) }}%).')"
-           oninput="this.setCustomValidity('')">
-    @error('weight')<div class="invalid-feedback">{{ $message }}</div>@enderror
-</div>
+<p class="text-muted small mb-0">
+    <i class="bi bi-info-circle me-1"></i>Bobot kriteria diatur per jabatan melalui menu Setting Proporsi.
+</p>

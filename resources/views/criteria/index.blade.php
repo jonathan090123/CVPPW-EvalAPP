@@ -15,18 +15,10 @@
     @endif
 </div>
 
-@if (abs($totalWeight - 100) > 0.1)
-    <div class="alert alert-warning">
-        <i class="bi bi-exclamation-triangle me-1"></i>
-        Total bobot saat ini <strong>{{ number_format($totalWeight, 2) }}%</strong>.
-        Pastikan total bobot = <strong>100%</strong> agar perhitungan akurat.
-    </div>
-@else
-    <div class="alert alert-success">
-        <i class="bi bi-check-circle me-1"></i>
-        Total bobot = <strong>100%</strong> &mdash; sudah valid.
-    </div>
-@endif
+<div class="alert alert-info">
+    <i class="bi bi-info-circle me-1"></i>
+    Bobot kriteria diatur per jabatan melalui menu <strong>Setting Proporsi</strong>.
+</div>
 
 <div class="card shadow-sm">
     <div class="card-body p-0">
@@ -36,7 +28,6 @@
                     <th width="5%">#</th>
                     <th>Nama Kriteria</th>
                     <th>Jenis</th>
-                    <th>Bobot</th>
                     <th width="15%">Aksi</th>
                 </tr>
             </thead>
@@ -52,7 +43,6 @@
                                 <span class="badge badge-cost">Cost</span>
                             @endif
                         </td>
-                        <td>{{ number_format($criterion->weight, 2) }}%</td>
                         <td>
                             @if (auth()->user()->isOwner())
                                 <a href="{{ route('criteria.edit', $criterion) }}" class="btn btn-warning btn-sm">
@@ -69,18 +59,9 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="text-center text-muted py-4">Belum ada kriteria.</td></tr>
+                    <tr><td colspan="4" class="text-center text-muted py-4">Belum ada kriteria.</td></tr>
                 @endforelse
             </tbody>
-            <tfoot>
-                <tr class="table-light">
-                    <td colspan="3" class="text-end fw-bold">Total Bobot</td>
-                    <td class="fw-bold {{ abs($totalWeight - 100) > 0.1 ? 'text-danger' : 'text-success' }}">
-                        {{ number_format($totalWeight, 2) }}%
-                    </td>
-                    <td></td>
-                </tr>
-            </tfoot>
         </table>
     </div>
 </div>

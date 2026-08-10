@@ -46,6 +46,52 @@ class User extends Authenticatable
         return $this->position === 'Owner';
     }
 
+    /**
+     * Departemen user, dicocokkan dari data karyawan melalui username (nama depan).
+     * Username bernomor (intan1, intan2, ...) menunjuk karyawan ke-n dengan
+     * nama depan sama (urut id, non-staff). Owner tidak terikat departemen.
+     */
+    public function department(): ?string
+    {
+        if ($this->isOwner()) {
+            return 'Owner';
+        }
+
+        $username = strtolower($this->username);
+        $base = $username;
+        $number = null;
+
+        if (preg_match('/^(.+?)(\d+)$/', $username, $matches)) {
+            $base = $matches[1];
+            $number = (int) $matches[2];
+        }
+
+        $matchesBase = fn (Employee $employee) => strtolower((string) strtok(trim($employee->name), ' ')) === $base;
+
+        $candidates = Employee::query()
+            ->whereNotNull('department')
+            ->where('position', '!=', 'STAFF')
+            ->get(['id', 'name', 'department'])
+            ->filter($matchesBase)
+            ->sortBy('id')
+            ->values();
+
+        if ($candidates->isEmpty()) {
+            $candidates = Employee::query()
+                ->whereNotNull('department')
+                ->get(['id', 'name', 'department'])
+                ->filter($matchesBase)
+                ->sortBy('id')
+                ->values();
+        }
+
+        if ($number !== null) {
+            return $candidates->get($number - 1)?->department;
+        }
+
+        return $candidates->first()?->department;
+    }
+
     public function level(): int
     {
         return self::HIERARCHY[$this->position] ?? 99;

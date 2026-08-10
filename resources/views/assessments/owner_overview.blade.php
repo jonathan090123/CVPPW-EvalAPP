@@ -54,6 +54,7 @@
                         <th>Departemen</th>
                         <th>Jumlah Penilaian</th>
                         <th>Total Skor</th>
+                        <th>Rata-rata</th>
                         <th>Detail</th>
                     </tr>
                 </thead>
@@ -74,6 +75,7 @@
                             <td>{{ $row['employee']->department }}</td>
                             <td>{{ $row['count'] }}</td>
                             <td>{{ number_format($row['total'], 4) }}</td>
+                            <td class="fw-semibold">{{ number_format($row['average'], 4) }}</td>
                             <td>
                                 <a href="#employee-details-{{ $row['employee']->id }}" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" role="button" aria-expanded="false">
                                     <i class="bi bi-list-ul me-1"></i>Detail
@@ -81,13 +83,13 @@
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="6" class="p-0">
+                            <td colspan="7" class="p-0">
                                 <div class="collapse px-3 py-2" id="employee-details-{{ $row['employee']->id }}">
                                     <div class="small fw-semibold mb-2">Riwayat penilaian untuk {{ $row['employee']->name }}</div>
                                     <ul class="list-group list-group-flush">
                                         @foreach ($row['details'] as $detail)
                                             <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                                                <span>{{ $detail['assessment']->name ?? $detail['assessment']->period }} <small class="text-muted">({{ $detail['assessment']->period }})</small></span>
+                                                <span>{{ $detail['assessment']->name ?? $detail['assessment']->period }} <small class="text-muted">({{ $detail['assessment']->period }}) · oleh {{ $detail['assessment']->creator?->username ?? 'data lama' }}</small></span>
                                                 <span class="text-muted">Rank {{ $detail['rank'] }} · {{ number_format($detail['score'], 4) }}</span>
                                             </li>
                                         @endforeach
@@ -96,7 +98,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="text-center text-muted py-4">Belum ada data untuk filter ini.</td></tr>
+                        <tr><td colspan="7" class="text-center text-muted py-4">Belum ada data untuk filter ini.</td></tr>
                     @endforelse
                 </tbody>
             </table>

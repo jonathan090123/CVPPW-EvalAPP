@@ -6,7 +6,6 @@ use App\Models\Assessment;
 use App\Models\AssessmentDetail;
 use App\Models\Criterion;
 use App\Models\Employee;
-use App\Models\User;
 use App\Services\McdmService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +19,7 @@ class AssessmentController extends Controller
     public function index(): View
     {
         $assessments = Assessment::query()
-            ->when(auth()->check() && !auth()->user()->isOwner(), function ($query) {
+            ->when(auth()->check() && ! auth()->user()->isOwner(), function ($query) {
                 $query->where('created_by', auth()->id());
             })
             ->withCount('details')
@@ -32,12 +31,18 @@ class AssessmentController extends Controller
 
     public function create(): View
     {
-        $allowed = auth()->user()->allowedEmployeePositions();
+        $user = auth()->user();
+        $allowed = $user->allowedEmployeePositions();
+        // Owner tidak dibatasi departemen; user lain hanya departemennya sendiri
+        $department = $user->isOwner() ? null : $user->department();
         $employees = Employee::orderBy('name')
             ->when($allowed, fn ($q) => $q->whereIn('position', $allowed))
+            ->when($department, fn ($q) => $q->whereRaw('LOWER(department) = ?', [mb_strtolower($department)]))
             ->get();
         $criteria = Criterion::orderBy('id')->get();
-        $departments = Employee::whereNotNull('department')->distinct()->pluck('department')->filter()->values();
+        $departments = Employee::whereNotNull('department')
+            ->when($department, fn ($q) => $q->whereRaw('LOWER(department) = ?', [mb_strtolower($department)]))
+            ->distinct()->pluck('department')->filter()->values();
         $positions = Employee::whereNotNull('position')->distinct()->pluck('position')
             ->filter()
             ->when($allowed, fn ($c) => $c->intersect($allowed))
@@ -48,13 +53,20 @@ class AssessmentController extends Controller
 
     public function storeEmployee(Request $request): JsonResponse
     {
-        $allowed = auth()->user()->allowedEmployeePositions();
+        $user = auth()->user();
+        $allowed = $user->allowedEmployeePositions();
         $validated = $request->validate([
             'nip' => 'required|string|max:20|unique:employees,nip',
             'name' => 'required|string|max:100',
             'department' => 'required|string|max:100',
             'position' => ['required', 'string', 'max:100', in_array('*', $allowed) ? 'nullable' : 'in:'.implode(',', $allowed)],
         ]);
+
+        // Non-owner: karyawan baru otomatis masuk departemen user agar bisa langsung dinilai
+        $department = $user->isOwner() ? null : $user->department();
+        if ($department !== null) {
+            $validated['department'] = $department;
+        }
 
         $employee = Employee::create($validated);
 
@@ -76,11 +88,14 @@ class AssessmentController extends Controller
             'scores.*.*' => 'required|numeric|min:1|max:5',
         ]);
 
-        // Pastikan user hanya menilai karyawan dengan jabatan yang boleh diaksesnya
-        $allowed = auth()->user()->allowedEmployeePositions();
+        // Pastikan user hanya menilai karyawan dengan jabatan & departemen yang boleh diaksesnya
+        $user = auth()->user();
+        $allowed = $user->allowedEmployeePositions();
+        $department = $user->isOwner() ? null : $user->department();
         $selectedIds = array_map('intval', $request->input('selected_employees', []));
         $validIds = Employee::whereIn('id', $selectedIds)
             ->when($allowed, fn ($q) => $q->whereIn('position', $allowed))
+            ->when($department, fn ($q) => $q->whereRaw('LOWER(department) = ?', [mb_strtolower($department)]))
             ->pluck('id')
             ->all();
 
@@ -148,22 +163,12 @@ class AssessmentController extends Controller
             ->filter()
             ->values();
 
-        $ownerId = User::where('position', 'Owner')->value('id');
-        $ownerAssessments = $ownerId
-            ? Assessment::query()
-                ->where('created_by', $ownerId)
-                ->withCount('details')
-                ->latest()
-                ->get()
-            : collect();
-
-        $assessments = $ownerAssessments->isNotEmpty()
-            ? $ownerAssessments
-            : Assessment::query()
-                ->whereNull('created_by')
-                ->withCount('details')
-                ->latest()
-                ->get();
+        // Owner melihat akumulasi dari SEMUA penilaian, siapapun pembuatnya
+        $assessments = Assessment::query()
+            ->withCount('details')
+            ->with('creator')
+            ->latest()
+            ->get();
         $criteria = Criterion::orderBy('id')->get();
         $overview = [];
         $accumulated = [];
@@ -179,7 +184,7 @@ class AssessmentController extends Controller
             $rank = 1;
             foreach ($scores as $employeeId => $score) {
                 $employee = $employees->firstWhere('id', $employeeId);
-                if (!$employee) {
+                if (! $employee) {
                     continue;
                 }
 
@@ -216,7 +221,7 @@ class AssessmentController extends Controller
                 ];
             }
 
-            if (!empty($ranking)) {
+            if (! empty($ranking)) {
                 $overview[] = [
                     'assessment' => $assessment,
                     'criteria' => $criteria,
@@ -225,8 +230,14 @@ class AssessmentController extends Controller
             }
         }
 
+        $accumulated = array_map(function (array $row): array {
+            $row['average'] = $row['count'] > 0 ? $row['total'] / $row['count'] : 0.0;
+
+            return $row;
+        }, $accumulated);
+
         usort($accumulated, function (array $a, array $b): int {
-            return $b['total'] <=> $a['total'];
+            return $b['average'] <=> $a['average'];
         });
 
         return view('assessments.owner_overview', compact('overview', 'positions', 'departments', 'selectedPosition', 'selectedDepartment', 'search', 'accumulated'));

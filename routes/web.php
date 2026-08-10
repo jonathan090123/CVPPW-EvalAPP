@@ -6,6 +6,7 @@ use App\Http\Controllers\CriterionController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ProportionController;
 use App\Http\Controllers\RankingController;
+use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 // Auth
@@ -47,4 +48,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('assessments/{assessment}/info', [AssessmentController::class, 'updateInfo'])->name('assessments.updateInfo');
 
     Route::get('/ranking/{assessment}', [RankingController::class, 'show'])->name('ranking.show');
+
+    // Pengaturan akun (ganti nama & password)
+    Route::get('/settings', [SettingsController::class, 'edit'])->name('settings.edit');
+    Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
 });

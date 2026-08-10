@@ -23,14 +23,13 @@
 
 {{-- Criteria info --}}
 <div class="card shadow-sm mb-4">
-    <div class="card-header bg-white fw-semibold">Bobot Kriteria</div>
+    <div class="card-header bg-white fw-semibold">Kriteria Penilaian</div>
     <div class="card-body p-0">
         <table class="table table-sm mb-0">
             <thead class="table-light">
                 <tr>
                     <th>Kriteria</th>
                     <th>Jenis</th>
-                    <th>Bobot</th>
                 </tr>
             </thead>
             <tbody>
@@ -42,7 +41,6 @@
                                 {{ ucfirst($criterion->type) }}
                             </span>
                         </td>
-                        <td>{{ number_format($criterion->weight, 2) }}%</td>
                     </tr>
                 @endforeach
             </tbody>

@@ -12,9 +12,8 @@ class CriterionController extends Controller
     public function index(): View
     {
         $criteria = Criterion::orderBy('id')->get();
-        $totalWeight = $criteria->sum('weight');
 
-        return view('criteria.index', compact('criteria', 'totalWeight'));
+        return view('criteria.index', compact('criteria'));
     }
 
     public function create(): View
@@ -27,22 +26,7 @@ class CriterionController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'type' => 'required|in:benefit,cost',
-            'weight' => 'required|numeric|min:0.01|max:100',
         ]);
-
-        $currentTotal = Criterion::sum('weight');
-
-        if ($currentTotal + $validated['weight'] > 100.01) {
-            return redirect()->back()
-                ->withInput()
-                ->withErrors([
-                    'weight' => sprintf(
-                        'Total bobot tidak boleh melebihi 100%%. Total saat ini %s%%, sisa bobot tersedia %s%%.',
-                        number_format($currentTotal, 2),
-                        number_format(max(0, 100 - $currentTotal), 2)
-                    ),
-                ]);
-        }
 
         Criterion::create($validated);
 
@@ -60,22 +44,7 @@ class CriterionController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'type' => 'required|in:benefit,cost',
-            'weight' => 'required|numeric|min:0.01|max:100',
         ]);
-
-        $othersTotal = Criterion::where('id', '!=', $criterion->id)->sum('weight');
-
-        if ($othersTotal + $validated['weight'] > 100.01) {
-            return redirect()->back()
-                ->withInput()
-                ->withErrors([
-                    'weight' => sprintf(
-                        'Total bobot tidak boleh melebihi 100%%. Total bobot kriteria lain %s%%, sisa bobot tersedia %s%%.',
-                        number_format($othersTotal, 2),
-                        number_format(max(0, 100 - $othersTotal), 2)
-                    ),
-                ]);
-        }
 
         $criterion->update($validated);
 

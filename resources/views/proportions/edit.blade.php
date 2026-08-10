@@ -9,6 +9,18 @@
     </span>
 </div>
 
+@if ($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i><strong>Gagal menyimpan. Periksa kembali:</strong>
+        <ul class="mb-0 mt-1">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
 
 
 <div class="card shadow-sm">
@@ -39,28 +51,26 @@
                             @php
                                 $totalWeight = 0;
                                 foreach ($criteria as $c) {
-                                    $totalWeight += $map[$pos][$c->id];
+                                    $totalWeight += (int) round($map[$pos][$c->id]);
                                 }
                             @endphp
                             <tr>
                                 <td class="py-2 px-3 fw-semibold">
                                     @positionBadge($pos)
                                     <br>
-                                    <small class="text-muted">Total bobot: <strong>{{ number_format($totalWeight, 2) }}%</strong></small>
-                                    @if (abs($totalWeight - 100) > 0.01)
-                                        <br>
-                                        <small class="text-danger">Belum 100%</small>
-                                    @else
-                                        <br>
-                                        <small class="text-success">Sesuai 100%</small>
-                                    @endif
+                                    <small class="text-muted">Total bobot: <strong class="js-total-weight">{{ $totalWeight }}%</strong></small>
+                                    <br>
+                                    <small class="js-total-status {{ $totalWeight === 100 ? 'text-success' : 'text-danger' }}">
+                                        {{ $totalWeight === 100 ? 'Sesuai 100%' : 'Belum 100%' }}
+                                    </small>
                                 </td>
                                 @foreach ($criteria as $criterion)
                                     <td class="p-1 text-center">
-                                        <input type="number" step="0.01" min="0" max="100"
+                                        <input type="number" step="1" min="0" max="100"
+                                               inputmode="numeric" pattern="[0-9]*"
                                                name="prop[{{ $pos }}][{{ $criterion->id }}]"
-                                               value="{{ rtrim(rtrim(number_format($map[$pos][$criterion->id], 2, '.', ''), '0'), '.') }}"
-                                               class="form-control form-control-sm text-center"
+                                               value="{{ (int) round($map[$pos][$criterion->id]) }}"
+                                               class="form-control form-control-sm text-center js-prop-input"
                                                style="min-width:80px"
                                                placeholder="10%">
                                     </td>
@@ -83,3 +93,52 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    (function () {
+        function updateRowTotal(row) {
+            var total = 0;
+            row.querySelectorAll('.js-prop-input').forEach(function (input) {
+                total += parseInt(input.value, 10) || 0;
+            });
+            var totalEl = row.querySelector('.js-total-weight');
+            if (totalEl) totalEl.textContent = total + '%';
+            var statusEl = row.querySelector('.js-total-status');
+            if (statusEl) {
+                if (total === 100) {
+                    statusEl.classList.remove('text-danger');
+                    statusEl.classList.add('text-success');
+                    statusEl.textContent = 'Sesuai 100%';
+                } else {
+                    statusEl.classList.remove('text-success');
+                    statusEl.classList.add('text-danger');
+                    statusEl.textContent = 'Belum 100%';
+                }
+            }
+        }
+
+        document.querySelectorAll('.js-prop-input').forEach(function (input) {
+            // Blokir karakter desimal/eksponen agar murni integer (tanpa koma/titik)
+            input.addEventListener('keydown', function (e) {
+                if (['.', ',', 'e', 'E', '+', '-'].indexOf(e.key) !== -1) {
+                    e.preventDefault();
+                }
+            });
+            // Sanitasi hasil ketik/paste: hanya digit, clamp 0-100, lalu update total live
+            input.addEventListener('input', function () {
+                var digits = input.value.replace(/[^0-9]/g, '');
+                if (digits === '') {
+                    input.value = '';
+                } else {
+                    var n = parseInt(digits, 10);
+                    if (n > 100) n = 100;
+                    input.value = String(n);
+                }
+                var row = input.closest('tr');
+                if (row) updateRowTotal(row);
+            });
+        });
+    })();
+</script>
+@endpush
