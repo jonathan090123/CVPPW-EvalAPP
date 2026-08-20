@@ -245,9 +245,13 @@ class AssessmentController extends Controller
 
     public function edit(Assessment $assessment): View
     {
-        $allowed = auth()->user()->allowedEmployeePositions();
+        $user = auth()->user();
+        $allowed = $user->allowedEmployeePositions();
+        // Owner tidak dibatasi departemen; user lain hanya departemennya sendiri
+        $department = $user->isOwner() ? null : $user->department();
         $employees = Employee::orderBy('name')
             ->when($allowed, fn ($q) => $q->whereIn('position', $allowed))
+            ->when($department, fn ($q) => $q->whereRaw('LOWER(department) = ?', [mb_strtolower($department)]))
             ->get();
         $criteria = Criterion::orderBy('id')->get();
         $details = $assessment->details()->get()->keyBy(fn ($d) => "{$d->employee_id}_{$d->criterion_id}");
@@ -280,8 +284,15 @@ class AssessmentController extends Controller
             'scores.*.*' => 'required|numeric|min:1|max:5',
         ]);
 
+        // Hanya karyawan dengan jabatan & departemen yang boleh diakses user
+        $user = auth()->user();
+        $allowed = $user->allowedEmployeePositions();
+        $department = $user->isOwner() ? null : $user->department();
         $criteria = Criterion::orderBy('id')->get();
-        $employees = Employee::orderBy('name')->get();
+        $employees = Employee::orderBy('name')
+            ->when($allowed, fn ($q) => $q->whereIn('position', $allowed))
+            ->when($department, fn ($q) => $q->whereRaw('LOWER(department) = ?', [mb_strtolower($department)]))
+            ->get();
 
         foreach ($employees as $employee) {
             foreach ($criteria as $criterion) {

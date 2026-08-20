@@ -39,6 +39,59 @@ it('shows all departments on create for owner', function () {
         ->assertSee('ANDI WIJAYA');
 });
 
+it('shows only same-department employees on edit for non-owner users', function () {
+    $assessment = Assessment::create([
+        'name' => 'Penilaian Marketing',
+        'period' => '2026',
+        'created_by' => $this->kiki->id,
+    ]);
+
+    $this->actingAs($this->kiki)
+        ->get(route('assessments.edit', $assessment))
+        ->assertOk()
+        ->assertSee('BUDI SANTOSO')
+        ->assertDontSee('ANDI WIJAYA')
+        ->assertSee('Marketing')
+        ->assertDontSee('HRD');
+});
+
+it('shows all departments on edit for owner', function () {
+    $assessment = Assessment::create([
+        'name' => 'Penilaian Semua',
+        'period' => '2026',
+        'created_by' => $this->owner->id,
+    ]);
+
+    $this->actingAs($this->owner)
+        ->get(route('assessments.edit', $assessment))
+        ->assertOk()
+        ->assertSee('BUDI SANTOSO')
+        ->assertSee('ANDI WIJAYA');
+});
+
+it('only updates details for same-department employees when non-owner submits edit', function () {
+    $criterion = Criterion::first();
+    $assessment = Assessment::create([
+        'name' => 'Penilaian Marketing',
+        'period' => '2026',
+        'created_by' => $this->kiki->id,
+    ]);
+
+    $this->actingAs($this->kiki)
+        ->put(route('assessments.update', $assessment), [
+            'scores' => [
+                $this->marketingStaff->id => [$criterion->id => 4],
+                $this->hrdStaff->id => [$criterion->id => 5],
+            ],
+        ])
+        ->assertSessionHasNoErrors();
+
+    $employeeIds = AssessmentDetail::where('assessment_id', $assessment->id)->pluck('employee_id')->all();
+
+    expect($employeeIds)->toContain($this->marketingStaff->id)
+        ->not->toContain($this->hrdStaff->id);
+});
+
 it('only stores details for same-department employees when non-owner submits', function () {
     $criterion = Criterion::first();
 
